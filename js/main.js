@@ -98,6 +98,91 @@
     counters.forEach((el) => io2.observe(el));
   }
 
+  // --- Gallery + lightbox ---
+  const grid = document.getElementById("masonry");
+  if (grid) {
+    const toolbar = document.getElementById("filters");
+    let items = [];
+    let view = [];
+    let current = 0;
+
+    // Lightbox DOM
+    const lb = document.createElement("div");
+    lb.className = "lightbox";
+    lb.innerHTML =
+      '<div class="lb-counter"></div>' +
+      '<button class="lb-btn lb-close" aria-label="Close">✕</button>' +
+      '<button class="lb-btn lb-prev" aria-label="Previous">‹</button>' +
+      '<img alt="">' +
+      '<button class="lb-btn lb-next" aria-label="Next">›</button>' +
+      '<div class="lb-caption"><div class="t"></div><div class="c"></div></div>';
+    document.body.appendChild(lb);
+    const lbImg = lb.querySelector("img");
+    const lbT = lb.querySelector(".lb-caption .t");
+    const lbC = lb.querySelector(".lb-caption .c");
+    const lbCount = lb.querySelector(".lb-counter");
+
+    const show = (i) => {
+      current = (i + view.length) % view.length;
+      const it = view[current];
+      lbImg.src = it.src;
+      lbImg.alt = it.caption;
+      lbT.textContent = it.cat;
+      lbC.textContent = it.caption;
+      lbCount.textContent = (current + 1) + " / " + view.length;
+    };
+    const open = (i) => { show(i); lb.classList.add("open"); document.body.style.overflow = "hidden"; };
+    const close = () => { lb.classList.remove("open"); document.body.style.overflow = ""; };
+
+    lb.querySelector(".lb-close").addEventListener("click", close);
+    lb.querySelector(".lb-next").addEventListener("click", () => show(current + 1));
+    lb.querySelector(".lb-prev").addEventListener("click", () => show(current - 1));
+    lb.addEventListener("click", (e) => { if (e.target === lb) close(); });
+    document.addEventListener("keydown", (e) => {
+      if (!lb.classList.contains("open")) return;
+      if (e.key === "Escape") close();
+      else if (e.key === "ArrowRight") show(current + 1);
+      else if (e.key === "ArrowLeft") show(current - 1);
+    });
+
+    const render = (cat) => {
+      view = cat === "All" ? items : items.filter((x) => x.cat === cat);
+      grid.innerHTML = "";
+      view.forEach((it, i) => {
+        const a = document.createElement("div");
+        a.className = "tile reveal in";
+        a.innerHTML =
+          '<img loading="lazy" src="' + it.thumb + '" alt="' + it.caption + '">' +
+          '<div class="expand"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></div>' +
+          '<div class="meta"><div class="t">' + it.cat + '</div><div class="c">' + it.caption + '</div></div>';
+        a.addEventListener("click", () => open(i));
+        grid.appendChild(a);
+      });
+    };
+
+    fetch("assets/gallery/manifest.json")
+      .then((r) => r.json())
+      .then((data) => {
+        items = data;
+        const cats = ["All", ...Array.from(new Set(data.map((x) => x.cat)))];
+        if (toolbar) {
+          cats.forEach((c, i) => {
+            const b = document.createElement("button");
+            b.className = "filter-btn" + (i === 0 ? " active" : "");
+            b.textContent = c;
+            b.addEventListener("click", () => {
+              toolbar.querySelectorAll(".filter-btn").forEach((x) => x.classList.remove("active"));
+              b.classList.add("active");
+              render(c);
+            });
+            toolbar.appendChild(b);
+          });
+        }
+        render("All");
+      })
+      .catch(() => { grid.innerHTML = '<p style="color:var(--muted)">Gallery is loading… if this persists, open via a web server.</p>'; });
+  }
+
   // --- Form fake submit ---
   document.querySelectorAll("form[data-demo]").forEach((form) => {
     form.addEventListener("submit", (e) => {

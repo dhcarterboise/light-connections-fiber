@@ -1,0 +1,4 @@
+# Raw photo originals (HEIC/large JPG/MP4) stay local; optimized web versions
+# live under assets/gallery/ and are committed.
+/gallery/
+.DS_Store
